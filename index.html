@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planning de la semaine</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
+<style>
+/* ===== Couleurs (clair puis sombre) ===== */
+:root {
+  --fond: #f3f4f7; --surface: #ffffff; --surface-2: #f8f9fb; --texte: #1d2330; --doux: #667085;
+  --bord: #dde1e7; --bord-leger: #eef0f3;
+  --accent: #2563eb; --accent-fond: #eaf1ff; --accent-texte: #ffffff;
+  --vert: #15803d; --vert-fond: #dcfce7; --orange: #ea580c; --orange-fond: #ffedd5;
+  --rouge: #dc2626; --rouge-fond: #fee2e2;
+  --ombre: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  --ombre-forte: 0 12px 32px rgba(16,24,40,.22);
+  --h-entete: 64px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #0f1218; --surface: #171b23; --surface-2: #1b2029; --texte: #e6e9ef; --doux: #9aa3b2;
+    --bord: #2b313d; --bord-leger: #20252f;
+    --accent: #6ea0ff; --accent-fond: #1b2740; --accent-texte: #0f1218;
+    --vert: #4ade80; --vert-fond: #15301f; --orange: #fb923c; --orange-fond: #3a2414;
+    --rouge: #f87171; --rouge-fond: #3b1a1a;
+    --ombre: 0 1px 2px rgba(0,0,0,.4); --ombre-forte: 0 12px 32px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 6px 12px;
+  cursor: pointer; white-space: nowrap;
+}
+button:hover { border-color: var(--doux); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .carte:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+button.principal { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
+button.danger { color: var(--rouge); }
+button.lien { border: none; background: none; color: var(--accent); padding: 4px; }
+[hidden] { display: none !important; }
+
+/* ===== En-tête ===== */
+.entete {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--bord);
+}
+.entete h1 { font-size: 18px; margin: 0; }
+#libelle-semaine { color: var(--doux); font-size: 13px; }
+.navigation { display: flex; gap: 4px; }
+.navigation button { padding: 6px 10px; }
+#btn-aujourdhui.ailleurs { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.progression { display: flex; align-items: center; gap: 8px; color: var(--doux); font-size: 13px; }
+.barre { width: 120px; height: 8px; border-radius: 4px; background: var(--bord-leger); overflow: hidden; }
+#barre-remplie { height: 100%; width: 0; background: var(--vert); transition: width .3s; }
+.actions { display: flex; gap: 6px; margin-left: auto; align-items: center; }
+#etat-sauvegarde { font-size: 12px; color: var(--rouge); }
+
+/* ===== Bandeau d'alarme ===== */
+#alarmes {
+  margin: 12px 16px 0; padding: 10px 14px; border: 1px solid var(--rouge); border-radius: 12px;
+  background: var(--rouge-fond);
+}
+.alarme-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.alarme-tete strong { color: var(--rouge); }
+.alarme-tete button { margin-left: auto; }
+.cloche { font-size: 20px; display: inline-block; animation: sonne 2.4s ease-in-out infinite; transform-origin: 50% 10%; }
+@keyframes sonne { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-16deg); } }
+@media (prefers-reduced-motion: reduce) { .cloche { animation: none; } }
+#alarmes ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+#alarmes li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 8px; border-radius: 8px;
+  background: var(--surface);
+}
+#alarmes .quand { color: var(--rouge); font-weight: 600; font-size: 12px; min-width: 110px; }
+#alarmes .titre { flex: 1; cursor: pointer; min-width: 120px; }
+#alarmes .titre:hover { text-decoration: underline; }
+#alarmes .boutons { display: flex; gap: 4px; }
+#alarmes .boutons button { padding: 3px 8px; font-size: 12px; }
+
+/* ===== Mise en page ===== */
+main { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+.panneau { position: sticky; top: calc(var(--h-entete) + 16px); display: grid; gap: 12px; }
+@media (max-width: 900px) { .panneau { position: static; } }
+.boite { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 12px; }
+.boite h2 { font-size: 14px; margin: 0 0 2px; }
+.aide { color: var(--doux); font-size: 12px; margin: 0 0 8px; }
+.bac { min-height: 90px; border: 2px dashed var(--bord); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.bac:empty::before { content: "Rien à caser. Dépose une tâche ici pour la garder sans jour précis."; color: var(--doux); font-size: 12px; padding: 6px; }
+.legende { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12px; color: var(--doux); }
+.legende li { display: flex; align-items: center; gap: 8px; }
+.pastille { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--doux); flex: none; }
+.pastille.cours { border-color: var(--orange); background: var(--orange-fond); }
+.pastille.fait { border-color: var(--vert); background: var(--vert-fond); opacity: .6; }
+.pastille.retard { border-color: var(--rouge); background: var(--rouge-fond); }
+
+/* ===== Grille de la semaine ===== */
+/* pas d'« overflow » ici : sinon la ligne des jours ne reste plus collée en haut quand on fait défiler */
+.grille {
+  display: grid; grid-template-columns: 52px repeat(7, minmax(120px, 1fr)); min-width: 900px;
+  background: var(--surface); border: 1px solid var(--bord); border-radius: 12px;
+}
+.coin, .tete-jour { position: sticky; top: var(--h-entete); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--bord); }
+.coin { border-top-left-radius: 12px; }
+.tete-jour { padding: 8px; text-align: center; border-left: 1px solid var(--bord-leger); }
+.tete-jour .nom { font-weight: 600; }
+.tete-jour .num { color: var(--doux); }
+.tete-jour .compte { display: block; font-size: 11px; color: var(--doux); }
+.tete-jour.aujourdhui { background: var(--accent-fond); }
+.tete-jour.aujourdhui .nom, .tete-jour.aujourdhui .num { color: var(--accent); }
+.tete-jour.complet .compte { color: var(--vert); font-weight: 600; }
+.libelle-ligne { font-size: 11px; color: var(--doux); text-align: right; padding: 2px 6px 0 0; border-top: 1px solid var(--bord-leger); }
+.libelle-ligne.heure-pleine { border-top-color: var(--bord); }
+.libelle-ligne.journee { border-top: none; border-bottom: 2px solid var(--bord); padding-top: 8px; line-height: 1.2; }
+.libelle-ligne.maintenant { color: var(--accent); font-weight: 700; }
+.cellule {
+  min-height: 28px; padding: 2px 3px; display: flex; flex-direction: column; gap: 3px;
+  border-left: 1px solid var(--bord-leger); border-top: 1px solid var(--bord-leger); cursor: copy; position: relative;
+}
+.cellule.heure-pleine { border-top-color: var(--bord); }
+.cellule.journee { min-height: 52px; border-top: none; border-bottom: 2px solid var(--bord); background: var(--surface-2); padding: 4px; }
+.cellule.passe { background: color-mix(in srgb, var(--bord-leger) 45%, transparent); }
+.cellule.aujourdhui { background: color-mix(in srgb, var(--accent-fond) 55%, transparent); }
+.cellule.maintenant { box-shadow: inset 0 2px 0 var(--accent); }
+.cellule:empty:hover::after { content: "+"; color: var(--doux); position: absolute; inset: 0; display: grid; place-items: center; font-size: 16px; }
+body.glisse .cellule:empty:hover::after { content: none; }
+.cellule.survol, .bac.survol { background: var(--accent-fond) !important; outline: 2px dashed var(--accent); outline-offset: -2px; }
+
+/* ===== Cartes de tâche ===== */
+.carte {
+  display: flex; align-items: flex-start; gap: 6px; padding: 5px 7px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--bord); border-left: 4px solid var(--accent);
+  box-shadow: var(--ombre); cursor: grab; user-select: none; touch-action: none; font-size: 13px;
+  transition: opacity .2s, background .2s;
+}
+.carte .corps { min-width: 0; flex: 1; }
+.carte .titre { overflow-wrap: anywhere; line-height: 1.25; }
+.carte .meta { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 2px; font-size: 11px; color: var(--doux); }
+.carte.en_cours { background: var(--orange-fond); border-color: var(--orange); border-left-color: var(--orange); }
+.carte.fait { background: var(--vert-fond); border-color: var(--vert); border-left-color: var(--vert); opacity: .5; }
+.carte.fait .titre { text-decoration: line-through; }
+.carte.abandon, .carte.reporte { opacity: .38; border-left-color: var(--doux); }
+.carte.abandon .titre, .carte.reporte .titre { text-decoration: line-through; }
+.carte.retard { border-color: var(--rouge); border-left-color: var(--rouge); background: var(--rouge-fond); }
+.carte.retard.en_cours { border-left-color: var(--orange); }
+.carte.source { opacity: .25; }
+.carte.fantome {
+  position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; box-shadow: var(--ombre-forte); cursor: grabbing;
+  opacity: .95;
+}
+body.glisse, body.glisse * { cursor: grabbing !important; }
+.btn-statut {
+  flex: none; width: 18px; height: 18px; margin-top: 1px; padding: 0; border-radius: 50%; border: 2px solid var(--doux);
+  background: var(--surface); font-size: 11px; line-height: 14px; font-weight: 700; color: #fff; text-align: center;
+}
+.btn-statut:hover { border-color: var(--texte); }
+.en_cours .btn-statut { border-color: var(--orange); background: linear-gradient(90deg, var(--orange) 50%, var(--surface) 50%); }
+.fait .btn-statut { border-color: var(--vert); background: var(--vert); }
+.retard .btn-statut { border-color: var(--rouge); }
+.badge { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 6px; text-transform: uppercase; letter-spacing: .02em; }
+.badge.retard { background: var(--rouge); color: #fff; }
+.badge.cours { background: var(--orange); color: #fff; }
+
+/* ===== Fenêtres (dialogues) ===== */
+dialog {
+  border: 1px solid var(--bord); border-radius: 14px; padding: 0; background: var(--surface); color: var(--texte);
+  box-shadow: var(--ombre-forte); width: min(460px, calc(100vw - 32px));
+}
+dialog::backdrop { background: rgba(10, 14, 22, .45); }
+.contenu, dialog form { padding: 18px; display: grid; gap: 14px; }
+dialog h2 { margin: 0; font-size: 17px; }
+.champ { display: grid; gap: 4px; border: none; margin: 0; padding: 0; font-weight: 600; font-size: 13px; }
+.champ legend { padding: 0; margin-bottom: 4px; }
+.champ input[type=text], .champ input[type=date], .champ input[type=time], .champ select, .champ textarea {
+  font-weight: 400; padding: 7px 9px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface-2); width: 100%;
+}
+.champ textarea { resize: vertical; }
+.facultatif { color: var(--doux); font-weight: 400; }
+.case { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: 13px; }
+.ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 400; }
+.ligne input[type=time] { width: auto; }
+.ligne select { width: auto; }
+.segments { display: flex; flex-wrap: wrap; gap: 6px; font-weight: 400; }
+.segments label { position: relative; }
+.segments input { position: absolute; opacity: 0; }
+.segments span { display: inline-block; padding: 6px 12px; border: 1px solid var(--bord); border-radius: 999px; cursor: pointer; }
+.segments input:checked + span { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.segments input:focus-visible + span { outline: 2px solid var(--accent); }
+.statuts .s-cours input:checked + span { background: var(--orange-fond); border-color: var(--orange); color: var(--orange); }
+.statuts .s-fait input:checked + span { background: var(--vert-fond); border-color: var(--vert); color: var(--vert); }
+.pied { display: flex; gap: 8px; align-items: center; }
+.espace { flex: 1; }
+.choix { display: grid; gap: 8px; }
+.puces { display: flex; flex-wrap: wrap; gap: 4px; }
+.puces span { padding: 3px 8px; font-size: 12px; }
+#liste-hebdo { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+#liste-hebdo li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--bord); border-radius: 10px; }
+#liste-hebdo .quand { font-size: 12px; color: var(--doux); min-width: 92px; }
+#liste-hebdo .titre { flex: 1; overflow-wrap: anywhere; }
+#liste-hebdo button { padding: 3px 8px; font-size: 12px; }
+#liste-hebdo:empty::before { content: "Aucune tâche hebdomadaire pour l'instant."; color: var(--doux); }
+
+/* ===== Onglets « Semaine » / « Liste » ===== */
+.onglets { display: flex; gap: 2px; background: var(--bord-leger); padding: 3px; border-radius: 10px; }
+.onglets a { padding: 5px 14px; border-radius: 8px; color: var(--doux); text-decoration: none; font-weight: 600; }
+.onglets a:hover { color: var(--texte); }
+.onglets a[aria-current="page"] { background: var(--surface); color: var(--texte); box-shadow: var(--ombre); }
+body.vue-liste .seulement-semaine, body.vue-liste #vue-semaine { display: none !important; }
+body:not(.vue-liste) #vue-liste { display: none; }
+
+/* ===== Page « Liste » ===== */
+#vue-liste { max-width: 760px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+.ajout-liste { display: flex; gap: 8px; margin: 8px 0 12px; }
+.ajout-liste input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface-2); }
+.liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#liste-a-faire:empty::before { content: "Rien dans la liste pour l'instant."; color: var(--doux); font-size: 13px; }
+.element {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--bord); border-left: 4px solid var(--accent);
+}
+.element .titre { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: text; }
+.element.en_cours { background: var(--orange-fond); border-color: var(--orange); }
+.element.fait { background: var(--vert-fond); border-color: var(--vert); opacity: .55; }
+.element.fait .titre { text-decoration: line-through; }
+.element.deplace { box-shadow: var(--ombre-forte); }
+.element input.renommer { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface-2); }
+.poignee { cursor: grab; color: var(--doux); touch-action: none; user-select: none; letter-spacing: -3px; padding-right: 4px; }
+.boutons-element { display: flex; gap: 4px; }
+.boutons-element button { padding: 3px 8px; font-size: 12px; }
+.ligne-titre { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+
+/* ===== Message en bas de l'écran ===== */
+#toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
+  display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-radius: 10px; z-index: 200;
+  background: var(--texte); color: var(--fond); box-shadow: var(--ombre-forte); transition: .2s; max-width: calc(100vw - 32px);
+}
+#toast.visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+#toast button { background: transparent; color: inherit; border-color: currentColor; padding: 3px 10px; }
+</style>
+<meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="stylesheet" href="telephone.css">
+<script src="telephone.js"></script>
+</head>
+<body>
+
+<header class="entete" id="entete">
+  <div>
+    <h1>🗓️ Planning de la semaine</h1>
+    <div id="libelle-semaine"></div>
+  </div>
+  <nav class="onglets" aria-label="Pages">
+    <a href="#semaine" id="onglet-semaine">Semaine</a>
+    <a href="#liste" id="onglet-liste">Liste <span id="compte-liste"></span></a>
+  </nav>
+  <nav class="navigation seulement-semaine" aria-label="Changer de semaine">
+    <button type="button" id="btn-prec" title="Semaine précédente (flèche gauche)">‹</button>
+    <button type="button" id="btn-aujourdhui">Cette semaine</button>
+    <button type="button" id="btn-suiv" title="Semaine suivante (flèche droite)">›</button>
+  </nav>
+  <div class="progression seulement-semaine" title="Tâches terminées cette semaine">
+    <div class="barre"><div id="barre-remplie"></div></div>
+    <span id="texte-progression"></span>
+  </div>
+  <div class="actions">
+    <span id="etat-sauvegarde" hidden>⚠ Serveur arrêté : modifications gardées dans le navigateur</span>
+    <button type="button" id="btn-nouvelle" class="principal seulement-semaine" title="Raccourci : touche N">+ Nouvelle tâche</button>
+    <button type="button" id="btn-hebdo" class="seulement-semaine">↻ Tâches hebdomadaires</button>
+    <button type="button" id="btn-reglages" title="Réglages" aria-label="Réglages">⚙</button>
+  </div>
+</header>
+
+<section id="alarmes" hidden aria-live="polite"></section>
+
+<main id="vue-semaine">
+  <aside class="panneau">
+    <div class="boite">
+      <h2>À caser cette semaine</h2>
+      <p class="aide">Sans jour précis. Glisse-les sur un jour quand tu sais.</p>
+      <div class="bac" id="bac" data-date="" data-heure=""></div>
+      <button type="button" class="lien" id="btn-ajout-bac">+ Ajouter ici</button>
+    </div>
+    <div class="boite">
+      <h2>Mode d'emploi</h2>
+      <ul class="legende">
+        <li><span class="pastille"></span>À faire : clique sur le rond pour changer</li>
+        <li><span class="pastille cours"></span>En cours (orange)</li>
+        <li><span class="pastille fait"></span>Fait (vert, transparent)</li>
+        <li><span class="pastille retard"></span>En retard (rouge + alarme)</li>
+        <li><span style="width:14px;text-align:center">↻</span>Revient chaque semaine</li>
+        <li><span style="width:14px;text-align:center">✋</span>Appuie et glisse une tâche pour la déplacer (jour et heure)</li>
+        <li><span style="width:14px;text-align:center">＋</span>Clique sur une case vide pour ajouter</li>
+      </ul>
+    </div>
+  </aside>
+  <div class="zone-grille"><div class="grille" id="grille"></div></div>
+</main>
+
+<!-- Page « Liste » : tâches sans jour ni heure -->
+<section id="vue-liste">
+  <div class="boite">
+    <h2>📝 Liste de tâches</h2>
+    <p class="aide">Sans jour ni heure. Quand tu sais quand le faire : « 📅 Planifier » l'envoie dans la semaine.
+      Clic sur le rond = changer l'état · clic sur le texte = renommer · ⋮⋮ = glisser pour changer l'ordre.</p>
+    <form id="form-liste" class="ajout-liste">
+      <input id="f-liste" type="text" maxlength="200" autocomplete="off" placeholder="Écris une tâche puis appuie sur Entrée…" aria-label="Nouvelle tâche de la liste">
+      <button type="submit" class="principal">Ajouter</button>
+    </form>
+    <ul id="liste-a-faire" class="liste"></ul>
+  </div>
+  <div class="boite" id="bloc-faites" hidden>
+    <div class="ligne-titre">
+      <h2 id="titre-faites">Faites</h2>
+      <button type="button" id="btn-effacer-faites" class="lien">Effacer les tâches faites</button>
+    </div>
+    <ul id="liste-faites" class="liste"></ul>
+  </div>
+</section>
+
+<!-- Fenêtre : ajouter / modifier une tâche -->
+<dialog id="dlg-tache">
+  <form id="form-tache" novalidate>
+    <h2 id="dlg-titre">Nouvelle tâche</h2>
+    <label class="champ">Quoi ?
+      <input id="f-titre" type="text" maxlength="200" autocomplete="off" placeholder="Ex. : Faire les courses">
+    </label>
+    <fieldset class="champ" id="ligne-type">
+      <legend>Répétition</legend>
+      <div class="segments">
+        <label><input type="radio" name="type" value="unique" checked><span>Une seule fois</span></label>
+        <label><input type="radio" name="type" value="hebdo"><span>↻ Chaque semaine</span></label>
+      </div>
+    </fieldset>
+    <div class="champ" id="bloc-unique">
+      <label for="f-date">Jour</label>
+      <input id="f-date" type="date">
+      <label class="case"><input id="f-libre" type="checkbox"> Pas de jour précis (n'importe quand dans cette semaine)</label>
+    </div>
+    <label class="champ" id="bloc-hebdo">Jour
+      <select id="f-jour"></select>
+    </label>
+    <div class="champ">
+      <label for="f-heure">Heure <span class="facultatif">(facultatif)</span></label>
+      <div class="ligne">
+        <input id="f-heure" type="time" step="300">
+        <button type="button" class="lien" id="btn-sans-heure">Sans heure</button>
+      </div>
+    </div>
+    <fieldset class="champ" id="ligne-statut">
+      <legend>État</legend>
+      <div class="segments statuts">
+        <label><input type="radio" name="statut" value="a_faire"><span>À faire</span></label>
+        <label class="s-cours"><input type="radio" name="statut" value="en_cours"><span>En cours</span></label>
+        <label class="s-fait"><input type="radio" name="statut" value="fait"><span>Fait</span></label>
+      </div>
+    </fieldset>
+    <fieldset class="champ" id="ligne-portee">
+      <legend>Si tu changes le jour ou l'heure, c'est pour…</legend>
+      <div class="segments">
+        <label><input type="radio" name="portee" value="semaine"><span>Cette semaine seulement</span></label>
+        <label><input type="radio" name="portee" value="toutes"><span>Toutes les semaines</span></label>
+      </div>
+    </fieldset>
+    <label class="champ">Note <span class="facultatif">(facultatif)</span>
+      <textarea id="f-note" rows="2"></textarea>
+    </label>
+    <div class="pied">
+      <button type="button" id="btn-supprimer" class="danger">Supprimer</button>
+      <button type="button" id="btn-vers-liste" title="Lui enlever son jour et son heure : elle va dans l'onglet Liste">→ Liste</button>
+      <span class="espace"></span>
+      <button type="button" data-fermer>Annuler</button>
+      <button type="submit" class="principal">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Fenêtre : supprimer une tâche hebdomadaire -->
+<dialog id="dlg-suppr">
+  <div class="contenu">
+    <h2>Supprimer « <span id="suppr-nom"></span> » ?</h2>
+    <p class="aide" style="margin:0">C'est une tâche qui revient chaque semaine.</p>
+    <div class="choix">
+      <button type="button" data-choix="semaine">Seulement cette semaine</button>
+      <button type="button" data-choix="arreter" class="danger">Ne plus jamais la répéter (à partir de cette semaine)</button>
+      <button type="button" data-fermer>Annuler</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Fenêtre : liste des tâches hebdomadaires -->
+<dialog id="dlg-hebdo">
+  <div class="contenu">
+    <h2>↻ Tâches hebdomadaires</h2>
+    <p class="aide" style="margin:0">Elles apparaissent toutes seules chaque semaine, jusqu'à ce que tu les arrêtes.</p>
+    <ul id="liste-hebdo"></ul>
+    <div class="pied">
+      <button type="button" id="btn-ajout-hebdo" class="principal">+ Ajouter</button>
+      <span class="espace"></span>
+      <button type="button" data-fermer>Fermer</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Fenêtre : réglages -->
+<dialog id="dlg-reglages">
+  <div class="contenu">
+    <h2>⚙ Réglages</h2>
+    <div class="champ">Heures affichées
+      <div class="ligne">de <select id="r-debut"></select> à <select id="r-fin"></select></div>
+    </div>
+    <fieldset class="champ">
+      <legend>Alarme « tâches en retard » (notification Windows) à :</legend>
+      <div class="segments puces" id="r-alarmes"></div>
+      <p class="aide" style="margin:4px 0 0;font-weight:400">Elle sonne aussi au démarrage du planning s'il reste des tâches pas finies des jours d'avant.</p>
+    </fieldset>
+    <label class="case"><input type="checkbox" id="r-rappel"> Me prévenir à l'heure prévue de chaque tâche</label>
+    <label class="case"><input type="checkbox" id="r-demarrage"> Lancer le planning avec Windows (les alarmes marchent même page fermée)</label>
+    <div class="ligne">
+      <button type="button" id="btn-test">🔔 Tester une alarme</button>
+      <button type="button" id="btn-arreter" class="danger">Arrêter le planning</button>
+    </div>
+    <fieldset class="champ pc-seulement" id="r-telephone">
+      <legend>📱 App téléphone : modifier le planning sur ton téléphone</legend>
+      <p class="aide" id="tel-etat" style="margin:0;font-weight:400">…</p>
+      <div class="ligne"><button type="button" id="btn-tel-synchro">↻ Synchroniser maintenant</button><button type="button" id="btn-tel-config">Configurer</button></div>
+      <div id="tel-config" hidden style="gap:8px;font-weight:400">
+        <p class="aide" style="margin:0">1. <a href="https://github.com/settings/personal-access-tokens/new?name=Planning+telephone&amp;description=Synchronisation+du+planning+PC+et+telephone&amp;expires_in=none&amp;contents=write" target="_blank" rel="noopener">Crée la clé d'accès GitHub</a> (déjà remplie) : dans « Repository access », choisis <b>Only select repositories</b> → <b>Planning-donnees</b>, puis <b>Generate token</b> et copie la clé (elle commence par github_pat_).</p>
+        <label>2. Colle la clé ici <input id="tel-jeton" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+        <label>3. Choisis un mot de passe (8 caractères minimum) : tu le taperas une seule fois sur le téléphone <input id="tel-mdp" type="password" autocomplete="new-password"></label>
+        <label>Répète le mot de passe <input id="tel-mdp2" type="password" autocomplete="new-password"></label>
+        <div class="ligne"><button type="button" class="principal" id="btn-tel-ok">Enregistrer</button></div>
+      </div>
+    </fieldset>
+    <p class="aide" style="margin:0">Raccourcis : N = nouvelle tâche · ← → = semaine précédente / suivante · Ctrl+Z = annuler.</p>
+    <div class="pied"><span class="espace"></span><button type="button" data-fermer>Fermer</button></div>
+  </div>
+</dialog>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   Planning de la semaine — logique de l'interface
+   Toutes les données tiennent dans un seul objet « donnees » enregistré par le serveur (data/donnees.json) :
+     - taches      : tâches uniques {id, titre, semaine (lundi), date (null = sans jour précis), heure, statut, note}
+     - recurrentes : tâches hebdomadaires {id, titre, jour (0 = lundi … 6 = dimanche, null = sans jour précis),
+                     heure, note, debut (date de création), fin (lundi à partir duquel elle ne revient plus)}
+     - occurrences : ce qui change pour UNE semaine d'une tâche hebdomadaire,
+                     clé « id|lundi » → {statut, jour, heure, supprime}
+     - liste       : page « Liste », tâches sans jour ni heure {id, titre, statut, note} (dans l'ordre affiché)
+     - reglages    : heures affichées, heures des alarmes…
+   Statuts : a_faire, en_cours, fait, abandon (laissée tomber), reporte (reportée à un autre jour)
+   ========================================================================== */
+
+const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const JOURS_COURTS = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const STATUTS = { a_faire: 'À faire', en_cours: 'En cours', fait: 'Fait', abandon: 'Laissée tomber', reporte: 'Reportée' };
+const STATUT_SUIVANT = { a_faire: 'en_cours', en_cours: 'fait', fait: 'a_faire', abandon: 'a_faire', reporte: 'a_faire' };
+const REGLAGES_DEFAUT = { heure_debut: 6, heure_fin: 23, alarmes_heures: [9, 14, 19], rappel_a_l_heure: true };
+const CLE_LOCALE = 'planning-semaine';
+
+const $ = (sel, racine = document) => racine.querySelector(sel);
+const $$ = (sel, racine = document) => [...racine.querySelectorAll(sel)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- Dates (format « AAAA-MM-JJ », heure locale de Paris) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const lireIso = s => { const [a, m, j] = s.split('-').map(Number); return new Date(a, m - 1, j); };
+const aujourdhui = () => iso(new Date());
+const ajouterJours = (s, n) => { const d = lireIso(s); d.setDate(d.getDate() + n); return iso(d); };
+const indexJour = s => (lireIso(s).getDay() + 6) % 7;            // 0 = lundi
+const lundiDe = s => ajouterJours(s, -indexJour(s));
+const jourMois = s => { const d = lireIso(s); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };
+const heureActuelle = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+function numeroSemaine(s) {
+  const d = lireIso(s);
+  d.setDate(d.getDate() + 3 - indexJour(s));                         // jeudi de la semaine
+  const premierJanvier = new Date(d.getFullYear(), 0, 1);
+  return 1 + Math.floor(Math.round((d - premierJanvier) / 86400000) / 7);   // round : heure d'été / d'hiver
+}
+function libelleSemaine(W) {
+  const d1 = lireIso(W), d2 = lireIso(ajouterJours(W, 6));
+  const j = d => (d.getDate() === 1 ? '1er' : d.getDate());
+  const debut = d1.getMonth() === d2.getMonth() ? j(d1)
+    : `${j(d1)} ${MOIS[d1.getMonth()]}${d1.getFullYear() !== d2.getFullYear() ? ' ' + d1.getFullYear() : ''}`;
+  return `Semaine ${numeroSemaine(W)} · du ${debut} au ${j(d2)} ${MOIS[d2.getMonth()]} ${d2.getFullYear()}`;
+}
+function jourLisible(s) {
+  const auj = aujourdhui();
+  if (s === auj) return "aujourd'hui";
+  if (s === ajouterJours(auj, -1)) return 'hier';
+  if (s === ajouterJours(auj, 1)) return 'demain';
+  return `${JOURS_COURTS[indexJour(s)].toLowerCase()} ${jourMois(s)}`;
+}
+
+/* ---------- État de l'application ---------- */
+let donnees = vide();
+let semaine = lundiDe(aujourdhui());     // lundi de la semaine affichée
+const historique = [];                    // pour « Annuler » (Ctrl+Z)
+let glissement = null;                    // tâche en train d'être déplacée
+let ignorerClicJusqua = 0;
+let vue = 'semaine';                      // page affichée : « semaine » ou « liste » (adresse …/#liste)
+let tri = null;                           // élément de la liste en train de changer de place
+
+function vide() {
+  return { version: 1, taches: [], recurrentes: [], occurrences: {}, liste: [], reglages: { ...REGLAGES_DEFAUT } };
+}
+function normaliser(d) {
+  const n = vide();
+  if (d && typeof d === 'object') {
+    if (Array.isArray(d.taches)) n.taches = d.taches;
+    if (Array.isArray(d.recurrentes)) n.recurrentes = d.recurrentes;
+    if (Array.isArray(d.liste)) n.liste = d.liste;
+    if (d.occurrences && typeof d.occurrences === 'object' && !Array.isArray(d.occurrences)) n.occurrences = d.occurrences;
+    n.reglages = { ...REGLAGES_DEFAUT, ...(d.reglages || {}) };
+  }
+  return n;
+}
+
+/* ---------- Chargement et enregistrement (serveur local, sinon navigateur) ---------- */
+let minuterieSauvegarde = null;
+let identiteServeur = '';   // identifiant du dossier d'où viennent les données (renvoyé à chaque enregistrement)
+let revServeur = '';        // numéro de version des données (pour fusionner avec ce qui arrive du téléphone)
+
+async function charger() {
+  try {
+    const r = await fetch('/api/donnees', { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    identiteServeur = r.headers.get('X-Planning-Dossier') || '';
+    revServeur = r.headers.get('X-Planning-Rev') || '';
+    donnees = normaliser(await r.json());
+    signalerHorsLigne(false);
+  } catch {
+    try { const s = localStorage.getItem(CLE_LOCALE); if (s) donnees = normaliser(JSON.parse(s)); } catch { /* rien */ }
+    signalerHorsLigne(true);
+  }
+}
+function programmerSauvegarde() {
+  try { localStorage.setItem(CLE_LOCALE, JSON.stringify(donnees)); } catch { /* rien */ }
+  clearTimeout(minuterieSauvegarde);
+  minuterieSauvegarde = setTimeout(sauvegarder, 300);
+}
+async function sauvegarder() {
+  const enCours = minuterieSauvegarde;
+  try {
+    const r = await fetch('/api/donnees', {
+      method: 'PUT', body: JSON.stringify(donnees),
+      headers: { 'Content-Type': 'application/json', 'X-Planning': '1', 'X-Planning-Dossier': identiteServeur, 'X-Planning-Rev': revServeur },
+    });
+    if (r.status === 409) {
+      // page chargée depuis une autre copie du planning : on reprend les données du serveur actuel
+      minuterieSauvegarde = null;
+      historique.length = 0;
+      await charger();
+      rendre();
+      return afficherToast('Planning rechargé (cette page venait d’une autre copie)');
+    }
+    if (!r.ok) throw new Error(r.status);
+    const rep = await r.json().catch(() => ({}));
+    signalerHorsLigne(false);
+    if (minuterieSauvegarde !== enCours) return; // une autre modification attend : elle refusionnera avec l'ancienne version
+    minuterieSauvegarde = null;
+    if (rep.rev) revServeur = String(rep.rev);
+    if (rep.donnees) { donnees = normaliser(rep.donnees); rendre(); afficherToast('Changements du téléphone ajoutés'); }
+  } catch {
+    signalerHorsLigne(true);
+    minuterieSauvegarde = setTimeout(sauvegarder, 5000);   // on réessaie toutes les 5 secondes
+  }
+}
+function signalerHorsLigne(oui) { $('#etat-sauvegarde').hidden = !oui; }
+
+async function appelerServeur(chemin, corps) {
+  const r = await fetch(chemin, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Planning': '1' }, body: JSON.stringify(corps ?? {}),
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+/* Toute modification passe par ici : mémorise l'état d'avant (Annuler), enregistre, redessine */
+function modifier(action, message) {
+  historique.push(JSON.stringify(donnees));
+  if (historique.length > 40) historique.shift();
+  action();
+  programmerSauvegarde();
+  rendre();
+  if (message) afficherToast(message, true);
+}
+function annuler() {
+  const precedent = historique.pop();
+  if (!precedent) return afficherToast('Rien à annuler');
+  donnees = JSON.parse(precedent);
+  programmerSauvegarde();
+  rendre();
+  afficherToast('Modification annulée');
+}
+
+/* ---------- Calcul des tâches d'une semaine ---------- */
+const estFinie = s => s === 'fait' || s === 'abandon' || s === 'reporte';
+const trouverUnique = id => donnees.taches.find(t => t.id === id);
+const trouverModele = id => donnees.recurrentes.find(r => r.id === id);
+
+function occUnique(t) {
+  return { cle: 'u:' + t.id, type: 'u', id: t.id, semaine: t.semaine, date: t.date || null, heure: t.heure || null,
+    titre: t.titre, note: t.note || '', statut: t.statut || 'a_faire', recurrente: false, deplacee: false };
+}
+/* Une tâche hebdomadaire existe-t-elle la semaine W ? */
+function estPresente(r, W) {
+  if (W < lundiDe(r.debut)) return false;
+  if (r.fin && W >= r.fin) return false;
+  if (r.jour != null && ajouterJours(W, r.jour) < r.debut) return false;   // jour déjà passé quand on l'a créée
+  return !(donnees.occurrences[r.id + '|' + W] || {}).supprime;
+}
+function occRecurrente(r, W) {
+  const s = donnees.occurrences[r.id + '|' + W] || {};
+  const jour = 'jour' in s ? s.jour : r.jour;
+  const heure = 'heure' in s ? s.heure : r.heure;
+  return { cle: `r:${r.id}:${W}`, type: 'r', id: r.id, semaine: W, date: jour == null ? null : ajouterJours(W, jour),
+    heure: heure || null, titre: r.titre, note: r.note || '', statut: s.statut || 'a_faire', recurrente: true,
+    deplacee: 'jour' in s || 'heure' in s };
+}
+function occurrencesSemaine(W) {
+  return [
+    ...donnees.taches.filter(t => t.semaine === W).map(occUnique),
+    ...donnees.recurrentes.filter(r => estPresente(r, W)).map(r => occRecurrente(r, W)),
+  ];
+}
+function trouverOcc(cle) {
+  const [type, id, W] = cle.split(':');
+  if (type === 'u') { const t = trouverUnique(id); return t ? occUnique(t) : null; }
+  const r = trouverModele(id);
+  return r ? occRecurrente(r, W) : null;
+}
+function estEnRetard(o, auj = aujourdhui()) {
+  if (estFinie(o.statut)) return false;
+  return o.date ? o.date < auj : o.semaine < lundiDe(auj);
+}
+const cleTri = o => `${o.date || ajouterJours(o.semaine, 6) + '~'} ${o.heure || '99'}`;
+/* Tâches prévues avant aujourd'hui et pas terminées (hebdomadaires : 4 semaines en arrière) */
+function tachesEnRetard() {
+  const auj = aujourdhui(), L = lundiDe(auj);
+  const res = donnees.taches.map(occUnique).filter(o => estEnRetard(o, auj));
+  for (let k = 4; k >= 0; k--) {
+    const W = ajouterJours(L, -7 * k);
+    for (const r of donnees.recurrentes) {
+      if (estPresente(r, W)) { const o = occRecurrente(r, W); if (estEnRetard(o, auj)) res.push(o); }
+    }
+  }
+  return res.sort((a, b) => cleTri(a).localeCompare(cleTri(b)));
+}
+
+/* ---------- Actions sur les tâches ---------- */
+function surcharge(id, W) { return (donnees.occurrences[id + '|' + W] ??= {}); }
+/* Retire d'une surcharge ce qui est identique au modèle (garde le fichier propre) */
+function nettoyerSurcharge(id, W) {
+  const cle = id + '|' + W, s = donnees.occurrences[cle], r = trouverModele(id);
+  if (!s) return;
+  if (r && 'jour' in s && s.jour === (r.jour ?? null)) delete s.jour;
+  if (r && 'heure' in s && (s.heure || null) === (r.heure || null)) delete s.heure;
+  if (s.statut === 'a_faire') delete s.statut;
+  if (!Object.keys(s).length) delete donnees.occurrences[cle];
+}
+function ecrireStatut(o, statut) {
+  if (o.type === 'u') trouverUnique(o.id).statut = statut;
+  else { surcharge(o.id, o.semaine).statut = statut; nettoyerSurcharge(o.id, o.semaine); }
+}
+function changerStatut(cle, statut) {
+  const o = trouverOcc(cle);
+  if (!o) return;
+  statut ??= STATUT_SUIVANT[o.statut];
+  modifier(() => ecrireStatut(o, statut), `« ${o.titre} » : ${STATUTS[statut].toLowerCase()}`);
+}
+/* Déplacer une tâche : date null = sans jour précis ; heure null = sans heure */
+function deplacer(cle, date, heure) {
+  const o = trouverOcc(cle);
+  if (!o) return;
+  const memeCase = o.heure && heure ? creneauDe(o.heure, donnees.reglages) === heure : o.heure === heure;
+  if (o.date === date && memeCase) return;   // lâchée dans sa propre case : on ne touche pas à l'heure exacte
+  let message = date ? `Déplacée ${jourLisible(date)}${heure ? ' à ' + heure : ''}` : 'Rangée dans « À caser cette semaine »';
+  modifier(() => {
+    if (o.type === 'u') {
+      const t = trouverUnique(o.id);
+      t.date = date; t.heure = heure;
+      if (date) t.semaine = lundiDe(date);
+    } else {
+      const s = surcharge(o.id, o.semaine);
+      s.jour = date ? indexJour(date) : null; s.heure = heure;
+      nettoyerSurcharge(o.id, o.semaine);
+      message += ' (cette semaine seulement)';
+    }
+  }, message);
+}
+function supprimerUnique(id) {
+  const t = trouverUnique(id);
+  modifier(() => { donnees.taches = donnees.taches.filter(x => x.id !== id); }, `« ${t.titre} » supprimée`);
+}
+/* Arrêter une tâche hebdomadaire à partir de la semaine W (si elle n'a jamais servi : effacée complètement) */
+function arreterHebdo(id, W) {
+  const r = trouverModele(id);
+  modifier(() => {
+    if (W <= lundiDe(r.debut)) {
+      donnees.recurrentes = donnees.recurrentes.filter(x => x.id !== id);
+      for (const k of Object.keys(donnees.occurrences)) if (k.startsWith(id + '|')) delete donnees.occurrences[k];
+    } else {
+      r.fin = W;
+      for (const k of Object.keys(donnees.occurrences)) if (k.startsWith(id + '|') && k.split('|')[1] >= W) delete donnees.occurrences[k];
+    }
+  }, `« ${r.titre} » ne reviendra plus`);
+}
+/* Reporter à aujourd'hui des tâches en retard */
+function reporterAujourdhui(cles) {
+  const auj = aujourdhui(), L = lundiDe(auj);
+  // une tâche hebdomadaire ratée plusieurs semaines n'est remise qu'une fois aujourd'hui
+  const dejaCopiees = new Set(cles.filter(c => c.startsWith('r:') && c.endsWith(':' + L)).map(c => c.split(':')[1]));
+  modifier(() => {
+    for (const cle of cles) {
+      const o = trouverOcc(cle);
+      if (!o) continue;
+      if (o.type === 'u') {
+        const t = trouverUnique(o.id); t.date = auj; t.semaine = L;
+      } else if (o.semaine === L) {
+        surcharge(o.id, L).jour = indexJour(auj); nettoyerSurcharge(o.id, L);
+      } else {
+        // tâche hebdomadaire d'une semaine passée : on la marque « reportée » et on en fait une copie pour aujourd'hui
+        ecrireStatut(o, 'reporte');
+        if (dejaCopiees.has(o.id)) continue;
+        dejaCopiees.add(o.id);
+        donnees.taches.push({ id: nouvelId(), titre: o.titre, semaine: L, date: auj, heure: o.heure, note: o.note,
+          statut: o.statut === 'en_cours' ? 'en_cours' : 'a_faire' });
+      }
+    }
+  }, cles.length > 1 ? `${cles.length} tâches reportées à aujourd'hui` : "Tâche reportée à aujourd'hui");
+}
+
+/* ==========================================================================
+   Affichage
+   ========================================================================== */
+function rendre() {
+  rendreEntete();
+  if (vue === 'semaine') rendreGrille();
+  rendreListe();
+  rendreAlarmes();
+  majHauteurEntete();
+}
+/* Une modification arrive pendant qu'on déplace ou renomme quelque chose : on ne redessine pas tout de suite */
+const occupe = () => glissement || tri || document.activeElement?.classList.contains('renommer');
+
+function compter(occs) {
+  const utiles = occs.filter(o => o.statut !== 'abandon' && o.statut !== 'reporte');
+  return { faites: utiles.filter(o => o.statut === 'fait').length, total: utiles.length };
+}
+
+function rendreEntete() {
+  for (const nom of ['semaine', 'liste']) $('#onglet-' + nom).setAttribute('aria-current', vue === nom ? 'page' : 'false');
+  if (vue === 'liste') { $('#libelle-semaine').textContent = 'Tâches sans jour ni heure'; return; }
+  const courante = lundiDe(aujourdhui());
+  let texte = libelleSemaine(semaine);
+  if (semaine < courante) texte += ' · passée';
+  if (semaine > courante) texte += ' · à venir';
+  $('#libelle-semaine').textContent = texte;
+  $('#btn-aujourdhui').classList.toggle('ailleurs', semaine !== courante);
+  const { faites, total } = compter(occurrencesSemaine(semaine));
+  $('#barre-remplie').style.width = total ? `${(100 * faites) / total}%` : '0';
+  $('#texte-progression').textContent = total ? `${faites} / ${total} faites` : 'Aucune tâche';
+}
+
+function carteHTML(o, auj) {
+  const retard = estEnRetard(o, auj);
+  const icone = { fait: '✓', abandon: '–', reporte: '→' }[o.statut] || '';
+  const meta = [
+    o.heure ? `<span>${o.heure.replace(':', ' h ')}</span>` : '',
+    o.recurrente ? '<span title="Revient chaque semaine">↻</span>' : '',
+    o.note ? `<span title="${esc(o.note)}">✎ note</span>` : '',
+    retard ? '<span class="badge retard">en retard</span>' : '',
+    o.statut === 'en_cours' ? '<span class="badge cours">en cours</span>' : '',
+    o.statut === 'abandon' || o.statut === 'reporte' ? `<span>${STATUTS[o.statut].toLowerCase()}</span>` : '',
+  ].join('');
+  const infobulle = `${o.titre} — ${STATUTS[o.statut]}${retard ? ' (en retard)' : ''}. Glisser pour déplacer, cliquer pour modifier.`;
+  return `<div class="carte ${o.statut}${retard ? ' retard' : ''}" data-cle="${esc(o.cle)}" tabindex="0" title="${esc(infobulle)}">`
+    + `<button type="button" class="btn-statut" title="Changer l'état (${STATUTS[o.statut]} → ${STATUTS[STATUT_SUIVANT[o.statut]]})">${icone}</button>`
+    + `<div class="corps"><div class="titre">${esc(o.titre)}</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div></div>`;
+}
+
+/* Créneau de 30 min où ranger une heure (les heures hors de l'affichage vont au premier / dernier créneau) */
+function creneauDe(heure, R) {
+  let [h, m] = heure.split(':').map(Number);
+  if (h < R.heure_debut) return `${pad(R.heure_debut)}:00`;
+  if (h > R.heure_fin) return `${pad(R.heure_fin)}:30`;
+  return `${pad(h)}:${m < 30 ? '00' : '30'}`;
+}
+
+function rendreGrille() {
+  const R = donnees.reglages, auj = aujourdhui();
+  const occs = occurrencesSemaine(semaine).sort((a, b) => (a.heure || '').localeCompare(b.heure || ''));
+  const parCase = new Map();
+  const bac = [];
+  for (const o of occs) {
+    if (!o.date) { bac.push(o); continue; }
+    const cle = o.date + '|' + (o.heure ? creneauDe(o.heure, R) : '');
+    if (!parCase.has(cle)) parCase.set(cle, []);
+    parCase.get(cle).push(o);
+  }
+  const contenu = cle => (parCase.get(cle) || []).map(o => carteHTML(o, auj)).join('');
+  const jours = [...Array(7)].map((_, j) => ajouterJours(semaine, j));
+  const classeJour = d => (d === auj ? ' aujourdhui' : d < auj ? ' passe' : '');
+  const maintenant = creneauDe(heureActuelle(), { heure_debut: -1, heure_fin: 99 });
+
+  let h = '<div class="coin"></div>';
+  for (const d of jours) {
+    const { faites, total } = compter(occs.filter(o => o.date === d));
+    h += `<div class="tete-jour${d === auj ? ' aujourdhui' : ''}${total && faites === total ? ' complet' : ''}" data-jour="${d}">`
+      + `<span class="nom">${JOURS_COURTS[indexJour(d)]}</span> <span class="num">${lireIso(d).getDate()}</span>`
+      + `<span class="compte">${total ? `${faites}/${total}${faites === total ? ' ✓' : ''}` : '&nbsp;'}</span></div>`;
+  }
+  h += '<div class="libelle-ligne journee">Sans<br>heure</div>';
+  for (const d of jours) h += `<div class="cellule journee${classeJour(d)}" data-date="${d}" data-heure="">${contenu(d + '|')}</div>`;
+  for (let heure = R.heure_debut; heure <= R.heure_fin; heure++) {
+    for (const m of ['00', '30']) {
+      const creneau = `${pad(heure)}:${m}`;
+      const pleine = m === '00' ? ' heure-pleine' : '';
+      const ici = semaine === lundiDe(auj) && creneau === maintenant;
+      h += `<div class="libelle-ligne${pleine}${ici ? ' maintenant' : ''}">${m === '00' ? heure + ' h' : ''}</div>`;
+      for (const d of jours) {
+        h += `<div class="cellule${pleine}${classeJour(d)}${d === auj && creneau === maintenant ? ' maintenant' : ''}"`
+          + ` data-date="${d}" data-heure="${creneau}">${contenu(d + '|' + creneau)}</div>`;
+      }
+    }
+  }
+  $('#grille').innerHTML = h;
+  $('#bac').innerHTML = bac.map(o => carteHTML(o, auj)).join('');
+}
+
+function rendreAlarmes() {
+  const liste = tachesEnRetard();
+  const zone = $('#alarmes');
+  document.title = liste.length ? `(${liste.length}) ⚠ Planning de la semaine` : 'Planning de la semaine';
+  if (!liste.length) { zone.hidden = true; zone.innerHTML = ''; return; }
+  const n = liste.length, s = n > 1 ? 's' : '';
+  const quand = o => (o.date ? jourLisible(o.date) + (o.heure ? ' · ' + o.heure : '') : `semaine du ${jourMois(o.semaine)}`);
+  zone.hidden = false;
+  zone.innerHTML = `<div class="alarme-tete"><span class="cloche" aria-hidden="true">🔔</span>`
+    + `<strong>Alarme : ${n} tâche${s} prévue${s} avant aujourd'hui ${n > 1 ? 'ne sont pas terminées' : "n'est pas terminée"}</strong>`
+    + (n > 1 ? '<button type="button" data-action="tout-reporter">Tout reporter à aujourd\'hui</button>' : '') + '</div><ul>'
+    + liste.map(o => `<li data-cle="${esc(o.cle)}"><span class="quand">${esc(quand(o))}</span>`
+      + `<span class="titre" title="Modifier">${o.recurrente ? '↻ ' : ''}${esc(o.titre)}</span>`
+      + (o.statut === 'en_cours' ? '<span class="badge cours">en cours</span>' : '')
+      + '<span class="boutons"><button type="button" data-action="fait">✓ Fait</button>'
+      + '<button type="button" data-action="reporter">→ À faire aujourd\'hui</button>'
+      + '<button type="button" data-action="abandon">Laisser tomber</button></span></li>').join('')
+    + '</ul>';
+}
+
+function majHauteurEntete() {
+  document.documentElement.style.setProperty('--h-entete', $('#entete').offsetHeight + 'px');
+}
+function defilerVersMaintenant() {
+  const ligne = $('.libelle-ligne.maintenant');
+  if (ligne) window.scrollTo({ top: ligne.getBoundingClientRect().top + scrollY - window.innerHeight / 3 });
+}
+
+function afficherToast(message, avecAnnuler = false) {
+  const t = $('#toast');
+  t.innerHTML = `<span>${esc(message)}</span>` + (avecAnnuler ? '<button type="button">Annuler</button>' : '');
+  t.classList.add('visible');
+  clearTimeout(t.minuterie);
+  t.minuterie = setTimeout(() => t.classList.remove('visible'), 5000);
+}
+$('#toast').addEventListener('click', e => {
+  if (e.target.closest('button')) { $('#toast').classList.remove('visible'); annuler(); }
+});
+
+/* ==========================================================================
+   Page « Liste » : tâches sans jour ni heure
+   ========================================================================== */
+function elementListeHTML(x) {
+  const statut = x.statut || 'a_faire';
+  const fait = statut === 'fait';
+  return `<li class="element ${statut}" data-id="${esc(x.id)}">`
+    + (fait ? '' : '<span class="poignee" title="Glisser pour changer l\'ordre">⋮⋮</span>')
+    + `<button type="button" class="btn-statut" title="Changer l'état (${STATUTS[statut]} → ${STATUTS[STATUT_SUIVANT[statut]]})">${fait ? '✓' : ''}</button>`
+    + `<span class="titre" title="Cliquer pour renommer">${esc(x.titre)}</span>`
+    + (statut === 'en_cours' ? '<span class="badge cours">en cours</span>' : '')
+    + '<span class="boutons-element">'
+    + (fait ? '' : '<button type="button" data-action="planifier" title="Lui donner un jour (et une heure) dans la semaine">📅 Planifier</button>')
+    + '<button type="button" data-action="supprimer" title="Supprimer" aria-label="Supprimer">✕</button></span></li>';
+}
+function rendreListe() {
+  const restantes = donnees.liste.filter(x => x.statut !== 'fait');
+  const faites = donnees.liste.filter(x => x.statut === 'fait');
+  $('#compte-liste').textContent = restantes.length ? `(${restantes.length})` : '';
+  if (vue !== 'liste') return;
+  $('#liste-a-faire').innerHTML = restantes.map(elementListeHTML).join('');
+  $('#liste-faites').innerHTML = faites.map(elementListeHTML).join('');
+  $('#bloc-faites').hidden = !faites.length;
+  $('#titre-faites').textContent = `Faites (${faites.length})`;
+}
+
+$('#form-liste').addEventListener('submit', e => {
+  e.preventDefault();
+  const champ = $('#f-liste');
+  const titre = champ.value.trim();
+  if (!titre) return;
+  modifier(() => donnees.liste.push({ id: nouvelId(), titre, statut: 'a_faire' }));
+  champ.value = '';
+  champ.focus();
+});
+$('#btn-effacer-faites').addEventListener('click', () => {
+  modifier(() => { donnees.liste = donnees.liste.filter(x => x.statut !== 'fait'); }, 'Tâches faites effacées');
+});
+$('#vue-liste').addEventListener('click', e => {
+  const li = e.target.closest('li.element');
+  const x = li && donnees.liste.find(y => y.id === li.dataset.id);
+  if (!x) return;
+  if (e.target.closest('.btn-statut')) {
+    const statut = STATUT_SUIVANT[x.statut || 'a_faire'];
+    return modifier(() => { x.statut = statut; }, `« ${x.titre} » : ${STATUTS[statut].toLowerCase()}`);
+  }
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'supprimer') return modifier(() => { donnees.liste = donnees.liste.filter(y => y !== x); }, `« ${x.titre} » supprimée`);
+  if (action === 'planifier') return ouvrirCreation({ titre: x.titre, note: x.note, depuisListe: x.id });
+  if (e.target.closest('.titre')) renommer(li, x);
+});
+
+/* Renommer directement dans la liste (Entrée = valider, Échap = annuler) */
+function renommer(li, x) {
+  const champ = document.createElement('input');
+  champ.type = 'text'; champ.maxLength = 200; champ.value = x.titre; champ.className = 'renommer';
+  li.querySelector('.titre').replaceWith(champ);
+  champ.focus();
+  champ.select();
+  let fini = false;
+  const terminer = garder => {
+    if (fini) return;
+    fini = true;
+    const titre = champ.value.trim();
+    if (garder && titre && titre !== x.titre) modifier(() => { x.titre = titre; });
+    else { champ.blur(); rendre(); }
+  };
+  champ.addEventListener('keydown', e => {
+    if (e.key === 'Enter') terminer(true);
+    if (e.key === 'Escape') terminer(false);
+  });
+  champ.addEventListener('blur', () => terminer(true));
+}
+
+/* Changer l'ordre : appuyer sur ⋮⋮ et glisser vers le haut ou le bas */
+$('#liste-a-faire').addEventListener('pointerdown', e => {
+  const poignee = e.target.closest('.poignee');
+  if (!poignee || e.button !== 0 || tri) return;
+  e.preventDefault();
+  const li = poignee.closest('li');
+  const ul = $('#liste-a-faire');
+  tri = li;
+  li.classList.add('deplace');
+  document.body.classList.add('glisse');
+  const bouger = ev => {
+    const avant = [...ul.children].find(x => {
+      if (x === li) return false;
+      const r = x.getBoundingClientRect();
+      return ev.clientY < r.top + r.height / 2;
+    });
+    if (avant !== li.nextElementSibling) ul.insertBefore(li, avant || null);
+  };
+  const lacher = () => {
+    window.removeEventListener('pointermove', bouger);
+    window.removeEventListener('pointerup', lacher);
+    window.removeEventListener('pointercancel', lacher);
+    li.classList.remove('deplace');
+    document.body.classList.remove('glisse');
+    tri = null;
+    const ordre = [...ul.children].map(x => x.dataset.id);
+    if (ordre.join() === donnees.liste.filter(x => x.statut !== 'fait').map(x => x.id).join()) return;
+    modifier(() => {
+      const parId = new Map(donnees.liste.map(x => [x.id, x]));
+      donnees.liste = [...ordre.map(id => parId.get(id)), ...donnees.liste.filter(x => x.statut === 'fait')];
+    });
+  };
+  window.addEventListener('pointermove', bouger);
+  window.addEventListener('pointerup', lacher);
+  window.addEventListener('pointercancel', lacher);
+});
+
+/* Passer d'une page à l'autre (onglets « Semaine » / « Liste ») */
+function lireVue() {
+  vue = location.hash === '#liste' ? 'liste' : 'semaine';
+  document.body.classList.toggle('vue-liste', vue === 'liste');
+}
+window.addEventListener('hashchange', () => {
+  lireVue();
+  rendre();
+  if (vue === 'liste') $('#f-liste').focus();
+  else defilerVersMaintenant();
+});
+
+/* ==========================================================================
+   Glisser-déposer (souris et doigt) : appuyer sur une tâche, la faire glisser, lâcher sur une case
+   ========================================================================== */
+function debutAppui(e) {
+  if (e.button !== 0 || glissement) return;
+  const carte = e.target.closest('.carte');
+  if (!carte || e.target.closest('.btn-statut')) return;
+  e.preventDefault();                                  // évite de sélectionner du texte
+  const r = carte.getBoundingClientRect();
+  glissement = { cle: carte.dataset.cle, carte, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+    dx: e.clientX - r.left, dy: e.clientY - r.top, largeur: r.width, actif: false, cible: null };
+  try { carte.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
+  carte.addEventListener('pointermove', mouvement);
+  carte.addEventListener('pointerup', finAppui);
+  carte.addEventListener('pointercancel', finAppui);
+}
+function mouvement(e) {
+  const g = glissement;
+  if (!g) return;
+  g.x = e.clientX; g.y = e.clientY;
+  if (!g.actif) {
+    if (Math.hypot(g.x - g.x0, g.y - g.y0) < 6) return;   // petit mouvement = simple clic
+    g.actif = true;
+    g.fantome = g.carte.cloneNode(true);
+    g.fantome.classList.add('fantome');
+    g.fantome.style.width = g.largeur + 'px';
+    document.body.appendChild(g.fantome);
+    g.carte.classList.add('source');
+    document.body.classList.add('glisse');
+    requestAnimationFrame(defilementAuto);
+  }
+  g.fantome.style.transform = `translate(${g.x - g.dx}px, ${g.y - g.dy}px) rotate(1.5deg)`;
+  majCible();
+}
+function majCible() {
+  const g = glissement;
+  const el = document.elementFromPoint(g.x, g.y);
+  const cible = el ? el.closest('[data-date]') : null;
+  if (cible === g.cible) return;
+  g.cible?.classList.remove('survol');
+  g.cible = cible;
+  cible?.classList.add('survol');
+}
+/* Fait défiler la page quand on approche du haut ou du bas de la fenêtre */
+function defilementAuto() {
+  const g = glissement;
+  if (!g || !g.actif) return;
+  const haut = $('#entete').offsetHeight + 60, bas = window.innerHeight - 60;
+  const v = g.y < haut ? -(haut - g.y) / 3 : g.y > bas ? (g.y - bas) / 3 : 0;
+  if (v) { window.scrollBy(0, Math.max(-25, Math.min(25, v))); majCible(); }
+  requestAnimationFrame(defilementAuto);
+}
+function finAppui(e) {
+  const g = glissement;
+  if (!g) return;
+  glissement = null;
+  g.carte.removeEventListener('pointermove', mouvement);
+  g.carte.removeEventListener('pointerup', finAppui);
+  g.carte.removeEventListener('pointercancel', finAppui);
+  ignorerClicJusqua = Date.now() + 300;
+  if (!g.actif) {
+    if (e.type === 'pointerup') ouvrirEdition(g.cle);
+    return;
+  }
+  g.fantome.remove();
+  g.carte.classList.remove('source');
+  document.body.classList.remove('glisse');
+  g.cible?.classList.remove('survol');
+  if (e.type === 'pointerup' && g.cible) deplacer(g.cle, g.cible.dataset.date || null, g.cible.dataset.heure || null);
+}
+
+for (const zone of [$('#grille'), $('#bac')]) {
+  zone.addEventListener('pointerdown', debutAppui);
+  zone.addEventListener('click', e => {
+    const bouton = e.target.closest('.btn-statut');
+    if (bouton) return changerStatut(bouton.closest('.carte').dataset.cle);
+    if (Date.now() < ignorerClicJusqua || e.target.closest('.carte')) return;
+    const caseVide = e.target.closest('.cellule');
+    if (caseVide) ouvrirCreation({ date: caseVide.dataset.date, heure: caseVide.dataset.heure || null });
+  });
+  zone.addEventListener('keydown', e => {
+    const carte = e.target.closest('.carte');
+    if (!carte || e.target.closest('.btn-statut')) return;
+    if (e.key === 'Enter') { e.preventDefault(); ouvrirEdition(carte.dataset.cle); }
+    if (e.key === ' ') { e.preventDefault(); changerStatut(carte.dataset.cle); }
+  });
+}
+
+/* Boutons du bandeau d'alarme */
+$('#alarmes').addEventListener('click', e => {
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  const ligne = e.target.closest('li');
+  if (action === 'tout-reporter') return reporterAujourdhui(tachesEnRetard().map(o => o.cle));
+  if (!ligne) return;
+  const cle = ligne.dataset.cle;
+  if (action === 'fait') changerStatut(cle, 'fait');
+  else if (action === 'abandon') changerStatut(cle, 'abandon');
+  else if (action === 'reporter') reporterAujourdhui([cle]);
+  else if (e.target.closest('.titre')) ouvrirEdition(cle);
+});
+
+/* ==========================================================================
+   Fenêtre « tâche » : créer, modifier
+   ========================================================================== */
+const dlgTache = $('#dlg-tache');
+let edition = null;   // { mode: 'creation' | 'unique' | 'occurrence' | 'modele', occ, id }
+let retourListeHebdo = false;
+
+$('#f-jour').innerHTML = JOURS.map((j, i) => `<option value="${i}">${j}</option>`).join('')
+  + '<option value="libre">Pas de jour précis</option>';
+
+const valeurRadio = nom => $(`#form-tache input[name="${nom}"]:checked`)?.value;
+function cocherRadio(nom, valeur) {
+  for (const r of $$(`#form-tache input[name="${nom}"]`)) r.checked = r.value === valeur;
+}
+function majTypeDialogue() {
+  const hebdo = edition.mode === 'creation' ? valeurRadio('type') === 'hebdo' : edition.mode !== 'unique';
+  $('#bloc-unique').hidden = hebdo;
+  $('#bloc-hebdo').hidden = !hebdo;
+}
+for (const r of $$('#form-tache input[name="type"]')) r.addEventListener('change', majTypeDialogue);
+$('#btn-sans-heure').addEventListener('click', () => { $('#f-heure').value = ''; });
+
+function ouvrirDialogue({ titreFenetre, titre = '', date, libre = false, jour = null, heure = '', statut = 'a_faire', note = '' }) {
+  $('#dlg-titre').textContent = titreFenetre;
+  $('#f-titre').value = titre;
+  $('#f-date').value = date || semaine;
+  $('#f-libre').checked = libre;
+  $('#f-jour').value = jour == null ? 'libre' : String(jour);
+  $('#f-heure').value = heure || '';
+  cocherRadio('statut', statut);
+  $('#f-note').value = note;
+  $('#ligne-type').hidden = edition.mode !== 'creation';
+  $('#ligne-statut').hidden = edition.mode === 'creation' || edition.mode === 'modele';
+  $('#ligne-portee').hidden = edition.mode !== 'occurrence';
+  $('#btn-supprimer').hidden = edition.mode === 'creation';
+  $('#btn-supprimer').textContent = edition.mode === 'modele' ? 'Arrêter' : 'Supprimer';
+  $('#btn-vers-liste').hidden = edition.mode !== 'unique';
+  majTypeDialogue();
+  dlgTache.showModal();
+  $('#f-titre').focus();
+}
+
+/* depuisListe : id d'une tâche de la page « Liste » qu'on est en train de planifier (elle quittera la liste) */
+function ouvrirCreation({ date = null, heure = null, hebdo = false, libre = false, titre = '', note = '', depuisListe = null } = {}) {
+  edition = { mode: 'creation', depuisListe };
+  cocherRadio('type', hebdo ? 'hebdo' : 'unique');
+  const auj = aujourdhui();
+  date ||= semaine === lundiDe(auj) ? auj : semaine;   // par défaut : aujourd'hui (ou le lundi de la semaine affichée)
+  ouvrirDialogue({ titreFenetre: depuisListe ? '📅 Planifier la tâche' : 'Nouvelle tâche', titre, note: note || '',
+    date, libre, jour: libre ? null : indexJour(date), heure });
+}
+function ouvrirEdition(cle) {
+  const o = trouverOcc(cle);
+  if (!o) return;
+  if (o.type === 'u') {
+    edition = { mode: 'unique', occ: o };
+    ouvrirDialogue({ titreFenetre: 'Modifier la tâche', titre: o.titre, date: o.date || o.semaine, libre: !o.date,
+      heure: o.heure, statut: o.statut, note: o.note });
+  } else {
+    edition = { mode: 'occurrence', occ: o };
+    cocherRadio('portee', o.deplacee ? 'semaine' : 'toutes');
+    ouvrirDialogue({ titreFenetre: `↻ Tâche hebdomadaire · semaine du ${jourMois(o.semaine)}`, titre: o.titre,
+      jour: o.date ? indexJour(o.date) : null, heure: o.heure, statut: o.statut, note: o.note });
+  }
+}
+function ouvrirModele(id) {
+  const r = trouverModele(id);
+  edition = { mode: 'modele', id };
+  ouvrirDialogue({ titreFenetre: '↻ Modifier la tâche hebdomadaire', titre: r.titre, jour: r.jour, heure: r.heure, note: r.note || '' });
+}
+
+$('#form-tache').addEventListener('submit', e => {
+  e.preventDefault();
+  const titre = $('#f-titre').value.trim();
+  if (!titre) { $('#f-titre').focus(); return afficherToast('Écris d’abord le nom de la tâche'); }
+  const heure = $('#f-heure').value || null;
+  const note = $('#f-note').value.trim();
+  const jourChoisi = $('#f-jour').value === 'libre' ? null : Number($('#f-jour').value);
+  const date = $('#f-date').value || semaine;
+  const libre = $('#f-libre').checked;
+  const statut = valeurRadio('statut');
+  const { mode, occ, id, depuisListe } = edition;
+  const elementListe = depuisListe ? donnees.liste.find(x => x.id === depuisListe) : null;
+  const retirerDeListe = () => { if (elementListe) donnees.liste = donnees.liste.filter(x => x !== elementListe); };
+
+  if (mode === 'creation' && valeurRadio('type') === 'hebdo') {
+    const r = { id: nouvelId(), titre, jour: jourChoisi, heure, note, debut: aujourdhui(), fin: null };
+    let premiere = lundiDe(aujourdhui());
+    if (!estPresenteApresAjout(r, premiere)) premiere = ajouterJours(premiere, 7);
+    modifier(() => { donnees.recurrentes.push(r); retirerDeListe(); },
+      `Ajoutée : elle reviendra chaque semaine${r.jour != null ? ' (prochaine fois ' + jourLisible(ajouterJours(premiere, r.jour)) + ')' : ''}`);
+  } else if (mode === 'creation') {
+    semaine = lundiDe(date);   // on affiche la semaine où la tâche a été ajoutée
+    modifier(() => {
+      donnees.taches.push({ id: nouvelId(), titre, semaine: lundiDe(date), date: libre ? null : date, heure, note,
+        statut: elementListe?.statut === 'en_cours' ? 'en_cours' : 'a_faire' });
+      retirerDeListe();
+    }, elementListe ? `Planifiée ${libre ? 'dans la semaine du ' + jourMois(lundiDe(date)) : jourLisible(date)} : elle est maintenant dans l'onglet Semaine`
+      : 'Tâche ajoutée');
+  } else if (mode === 'unique') {
+    modifier(() => {
+      const t = trouverUnique(occ.id);
+      Object.assign(t, { titre, semaine: lundiDe(date), date: libre ? null : date, heure, note });
+      if (statut) t.statut = statut;
+    }, 'Tâche modifiée');
+    if (lundiDe(date) !== semaine) { semaine = lundiDe(date); rendre(); }
+  } else if (mode === 'occurrence') {
+    modifier(() => {
+      const r = trouverModele(occ.id);
+      r.titre = titre; r.note = note;
+      const s = surcharge(occ.id, occ.semaine);
+      if (statut) s.statut = statut;
+      const ancienJour = occ.date ? indexJour(occ.date) : null;
+      if (jourChoisi !== ancienJour || heure !== occ.heure) {
+        if (valeurRadio('portee') === 'toutes') {
+          r.jour = jourChoisi; r.heure = heure;
+          delete s.jour; delete s.heure;
+        } else {
+          s.jour = jourChoisi; s.heure = heure;
+        }
+      }
+      nettoyerSurcharge(occ.id, occ.semaine);
+    }, 'Tâche hebdomadaire modifiée');
+  } else if (mode === 'modele') {
+    modifier(() => Object.assign(trouverModele(id), { titre, jour: jourChoisi, heure, note }), 'Tâche hebdomadaire modifiée');
+  }
+  dlgTache.close();
+});
+/* Une nouvelle tâche hebdomadaire (pas encore enregistrée) apparaît-elle la semaine W ? */
+function estPresenteApresAjout(r, W) {
+  return !(r.jour != null && ajouterJours(W, r.jour) < r.debut);
+}
+
+/* Tâche de la semaine → page « Liste » (elle perd son jour et son heure) */
+$('#btn-vers-liste').addEventListener('click', () => {
+  const t = trouverUnique(edition.occ.id);
+  dlgTache.close();
+  modifier(() => {
+    donnees.taches = donnees.taches.filter(x => x !== t);
+    donnees.liste.push({ id: t.id, titre: t.titre, note: t.note || '', statut: t.statut === 'en_cours' ? 'en_cours' : 'a_faire' });
+  }, `« ${t.titre} » remise dans l'onglet Liste`);
+});
+
+$('#btn-supprimer').addEventListener('click', () => {
+  const { mode, occ, id } = edition;
+  if (mode === 'unique') { dlgTache.close(); return supprimerUnique(occ.id); }
+  $('#suppr-nom').textContent = mode === 'modele' ? trouverModele(id).titre : occ.titre;
+  $('#dlg-suppr [data-choix="semaine"]').hidden = mode === 'modele';
+  $('#dlg-suppr').showModal();
+});
+$('#dlg-suppr').addEventListener('click', e => {
+  const choix = e.target.closest('[data-choix]')?.dataset.choix;
+  if (!choix) return;
+  const { mode, occ, id } = edition;
+  $('#dlg-suppr').close();
+  dlgTache.close();
+  if (choix === 'semaine') {
+    modifier(() => { surcharge(occ.id, occ.semaine).supprime = true; }, `« ${occ.titre} » retirée de cette semaine`);
+  } else if (mode === 'modele') {
+    arreterHebdo(id, lundiDe(aujourdhui()));
+  } else {
+    arreterHebdo(occ.id, occ.semaine);
+  }
+});
+
+/* ==========================================================================
+   Fenêtre « tâches hebdomadaires »
+   ========================================================================== */
+const dlgHebdo = $('#dlg-hebdo');
+function rendreListeHebdo() {
+  const L = lundiDe(aujourdhui());
+  const actives = donnees.recurrentes.filter(r => !r.fin || r.fin > L)
+    .sort((a, b) => (a.jour ?? 7) - (b.jour ?? 7) || (a.heure || '').localeCompare(b.heure || ''));
+  $('#liste-hebdo').innerHTML = actives.map(r => `<li data-id="${esc(r.id)}">`
+    + `<span class="quand">${r.jour != null ? JOURS[r.jour] : 'Jour libre'}${r.heure ? ' · ' + r.heure : ''}</span>`
+    + `<span class="titre">${esc(r.titre)}</span>`
+    + '<button type="button" data-action="modifier">Modifier</button>'
+    + '<button type="button" data-action="arreter" class="danger">Arrêter</button></li>').join('');
+}
+$('#btn-hebdo').addEventListener('click', () => { rendreListeHebdo(); dlgHebdo.showModal(); });
+$('#btn-ajout-hebdo').addEventListener('click', () => { retourListeHebdo = true; dlgHebdo.close(); ouvrirCreation({ hebdo: true }); });
+$('#liste-hebdo').addEventListener('click', e => {
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  const id = e.target.closest('li')?.dataset.id;
+  if (!action || !id) return;
+  if (action === 'modifier') { retourListeHebdo = true; dlgHebdo.close(); ouvrirModele(id); }
+  if (action === 'arreter') { arreterHebdo(id, lundiDe(aujourdhui())); rendreListeHebdo(); }
+});
+dlgTache.addEventListener('close', () => {
+  if (retourListeHebdo) { retourListeHebdo = false; rendreListeHebdo(); dlgHebdo.showModal(); }
+});
+
+/* ==========================================================================
+   Fenêtre « réglages »
+   ========================================================================== */
+const dlgReglages = $('#dlg-reglages');
+const optionsHeures = [...Array(24)].map((_, h) => `<option value="${h}">${h} h</option>`).join('');
+$('#r-debut').innerHTML = optionsHeures;
+$('#r-fin').innerHTML = optionsHeures;
+$('#r-alarmes').innerHTML = [...Array(17)].map((_, i) => i + 6)
+  .map(h => `<label><input type="checkbox" value="${h}"><span>${h} h</span></label>`).join('');
+
+$('#btn-reglages').addEventListener('click', async () => {
+  const R = donnees.reglages;
+  $('#r-debut').value = R.heure_debut;
+  $('#r-fin').value = R.heure_fin;
+  for (const c of $$('#r-alarmes input')) c.checked = R.alarmes_heures.includes(Number(c.value));
+  $('#r-rappel').checked = R.rappel_a_l_heure;
+  dlgReglages.showModal();
+  try {
+    const r = await fetch('/api/demarrage-auto', { cache: 'no-store' });
+    $('#r-demarrage').checked = (await r.json()).actif;
+    $('#r-demarrage').disabled = false;
+  } catch { $('#r-demarrage').disabled = true; }
+});
+dlgReglages.addEventListener('change', async e => {
+  if (e.target.id === 'r-demarrage') {
+    try {
+      const rep = await appelerServeur('/api/demarrage-auto', { actif: e.target.checked });
+      e.target.checked = rep.actif;
+      afficherToast(rep.actif ? 'Le planning se lancera avec Windows' : 'Le planning ne se lancera plus avec Windows');
+    } catch {
+      e.target.checked = !e.target.checked;
+      afficherToast('Impossible : le serveur du planning ne répond pas');
+    }
+    return;
+  }
+  let debut = Number($('#r-debut').value), fin = Number($('#r-fin').value);
+  if (debut > fin) [debut, fin] = [fin, debut];
+  modifier(() => Object.assign(donnees.reglages, {
+    heure_debut: debut, heure_fin: fin, rappel_a_l_heure: $('#r-rappel').checked,
+    alarmes_heures: $$('#r-alarmes input:checked').map(c => Number(c.value)),
+  }));
+});
+$('#btn-test').addEventListener('click', async () => {
+  try { await appelerServeur('/api/test-alarme'); afficherToast('Alarme envoyée : regarde en bas à droite de l’écran'); }
+  catch { afficherToast('L’alarme Windows n’a pas pu s’afficher (serveur arrêté ?)'); }
+});
+$('#btn-arreter').addEventListener('click', async () => {
+  if (!confirm('Arrêter le planning ? Les alarmes ne sonneront plus jusqu’au prochain lancement (start.bat).')) return;
+  try { await appelerServeur('/api/arreter'); } catch { /* déjà arrêté */ }
+  dlgReglages.close();
+  signalerHorsLigne(true);
+  afficherToast('Planning arrêté. Relance-le avec start.bat');
+});
+
+/* ---------- App téléphone : état de la synchronisation et configuration ---------- */
+const echapperTexte = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+async function majTelephone() {
+  try {
+    const t = await (await fetch('/api/telephone', { cache: 'no-store' })).json();
+    $('#tel-etat').innerHTML = t.configure
+      ? `✓ Synchronisation active${t.derniere ? ` · dernière : ${t.derniere}` : ''}${t.erreur ? `<br><span style="color:var(--rouge)">⚠ ${echapperTexte(t.erreur)}</span>` : ''}<br>Sur le téléphone : ouvre <b>${t.adresse}</b> dans Chrome, installe l’app et tape ton mot de passe.`
+      : 'Pas encore configurée : clique sur « Configurer » (2 minutes, une seule fois).';
+    $('#btn-tel-synchro').hidden = !t.configure;
+  } catch { $('#tel-etat').textContent = 'Serveur arrêté : relance le planning.'; }
+}
+$('#btn-reglages').addEventListener('click', majTelephone);
+$('#btn-tel-config').addEventListener('click', () => {
+  const z = $('#tel-config');
+  z.hidden = !z.hidden;
+  z.style.display = z.hidden ? '' : 'grid';
+});
+$('#btn-tel-synchro').addEventListener('click', async () => {
+  try {
+    const rep = await appelerServeur('/api/synchroniser');
+    afficherToast(rep.recu ? 'Changements du téléphone récupérés' : 'Tout est déjà à jour');
+    relire();
+  } catch { afficherToast('Synchronisation impossible pour le moment'); }
+  majTelephone();
+});
+async function chiffrerJeton(jeton, mdp) {
+  const enc = new TextEncoder();
+  const sel = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const base = await crypto.subtle.importKey('raw', enc.encode(mdp), 'PBKDF2', false, ['deriveKey']);
+  const cle = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: sel, iterations: 600000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const chiffre = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode('planning-semaine-v1') }, cle, enc.encode(jeton));
+  const b64 = (u) => btoa(String.fromCharCode(...new Uint8Array(u)));
+  return { version: 1, iterations: 600000, sel: b64(sel), iv: b64(iv), donnees: b64(chiffre) };
+}
+$('#btn-tel-ok').addEventListener('click', async () => {
+  const jeton = $('#tel-jeton').value.trim(), mdp = $('#tel-mdp').value;
+  if (!jeton.startsWith('github_pat_')) return afficherToast('Colle la clé GitHub (elle commence par github_pat_)');
+  if (mdp.length < 8) return afficherToast('Mot de passe trop court (8 caractères minimum)');
+  if (mdp !== $('#tel-mdp2').value) return afficherToast('Les deux mots de passe ne sont pas identiques');
+  $('#btn-tel-ok').disabled = true; $('#btn-tel-ok').textContent = 'Enregistrement…';
+  try {
+    const r = await fetch('/api/telephone', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Planning': '1' },
+      body: JSON.stringify({ jeton, acces: await chiffrerJeton(jeton, mdp) }) });
+    const rep = await r.json();
+    if (!r.ok) throw new Error(rep.erreur || r.status);
+    for (const id of ['#tel-jeton', '#tel-mdp', '#tel-mdp2']) $(id).value = '';
+    $('#tel-config').hidden = true; $('#tel-config').style.display = '';
+    afficherToast('App téléphone prête : ouvre l’adresse sur ton téléphone');
+  } catch (e) { afficherToast(`Impossible : ${e.message}`); }
+  $('#btn-tel-ok').disabled = false; $('#btn-tel-ok').textContent = 'Enregistrer';
+  majTelephone();
+});
+
+/* Boutons « Fermer / Annuler » de toutes les fenêtres */
+for (const b of $$('[data-fermer]')) b.addEventListener('click', () => b.closest('dialog').close());
+
+/* ==========================================================================
+   Barre du haut, raccourcis clavier, mises à jour automatiques
+   ========================================================================== */
+function changerSemaine(n) { semaine = n === 0 ? lundiDe(aujourdhui()) : ajouterJours(semaine, 7 * n); rendre(); }
+$('#btn-prec').addEventListener('click', () => changerSemaine(-1));
+$('#btn-suiv').addEventListener('click', () => changerSemaine(1));
+$('#btn-aujourdhui').addEventListener('click', () => { changerSemaine(0); defilerVersMaintenant(); });
+$('#btn-nouvelle').addEventListener('click', () => ouvrirCreation());
+$('#btn-ajout-bac').addEventListener('click', () => ouvrirCreation({ libre: true }));
+
+document.addEventListener('keydown', e => {
+  if (document.querySelector('dialog[open]') || e.target.closest('input, textarea, select')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); annuler(); }
+  else if (e.ctrlKey || e.metaKey || e.altKey) return;
+  else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (vue === 'liste') $('#f-liste').focus(); else ouvrirCreation(); }
+  else if (vue === 'semaine' && e.key === 'ArrowLeft') changerSemaine(-1);
+  else if (vue === 'semaine' && e.key === 'ArrowRight') changerSemaine(1);
+});
+
+window.addEventListener('resize', majHauteurEntete);
+
+/* Chaque minute : met à jour « maintenant », les retards (passage à minuit)… */
+let dernierJour = aujourdhui();
+setInterval(() => {
+  if (occupe()) return;
+  if (aujourdhui() !== dernierJour) {
+    if (semaine === lundiDe(dernierJour)) semaine = lundiDe(aujourdhui());
+    dernierJour = aujourdhui();
+  }
+  rendre();
+}, 60_000);
+
+/* Quand on revient sur la fenêtre : relit les données (au cas où elles ont changé ailleurs) */
+async function relire() {
+  if (minuterieSauvegarde || occupe()) return;
+  try {
+    const r = await fetch('/api/donnees', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = normaliser(await r.json());
+    identiteServeur = r.headers.get('X-Planning-Dossier') || '';
+    revServeur = r.headers.get('X-Planning-Rev') || '';
+    signalerHorsLigne(false);
+    if (JSON.stringify(d) !== JSON.stringify(donnees)) { donnees = d; rendre(); }
+  } catch { /* serveur arrêté : on garde ce qu'on a */ }
+}
+window.addEventListener('focus', relire);
+/* Toutes les 20 secondes : des changements sont-ils arrivés du téléphone ? */
+setInterval(async () => {
+  if (minuterieSauvegarde || occupe() || document.hidden) return;
+  try {
+    const r = await fetch('/api/rev', { cache: 'no-store' });
+    if (r.ok && String((await r.json()).rev) !== revServeur) relire();
+  } catch { /* serveur arrêté */ }
+}, 20_000);
+
+lireVue();
+charger().then(() => { rendre(); if (vue === 'semaine') defilerVersMaintenant(); });
+</script>
+</body>
+</html>

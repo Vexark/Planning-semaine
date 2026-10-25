@@ -1,0 +1,62 @@
+/* App téléphone du planning : s'ajoute aux styles de la page du PC (mêmes couleurs, mêmes variables). */
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: hidden; padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Ce qui ne sert qu'au PC : alarmes Windows, démarrage avec Windows, arrêt du serveur, raccourcis clavier */
+.pc-seulement, #btn-test, #btn-arreter, label.case:has(#r-demarrage), #dlg-reglages fieldset:has(#r-alarmes),
+#dlg-reglages .aide:has(+ .pied), #etat-sauvegarde { display: none !important; }
+
+/* Pastille de synchronisation dans l'en-tête */
+.tel-sync { font-size: 13px; white-space: nowrap; border-radius: 999px; padding: 6px 10px; min-height: 36px; }
+.tel-sync.attention { color: var(--orange); border-color: var(--orange); }
+
+/* Écran de connexion (premier lancement) */
+#tel-connexion { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--fond, #000) 70%, transparent); }
+.tel-carte { width: min(100%, 420px); display: grid; gap: 12px; padding: 20px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--bord); box-shadow: 0 10px 40px rgba(0, 0, 0, .25); }
+.tel-carte h2 { margin: 0; font-size: 20px; }
+.tel-carte p { margin: 0; color: var(--doux); line-height: 1.45; }
+.tel-carte input { font-size: 16px; min-height: 46px; padding: 0 12px; }
+.tel-carte button { min-height: 46px; }
+.tel-carte .tel-erreur { color: var(--rouge); font-weight: 600; }
+
+/* Bandeau d'installation */
+.tel-installer { position: fixed; z-index: 90; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 6px; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--bord);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, .25); }
+.tel-installer[hidden] { display: none; }
+.tel-installer span { color: var(--doux); font-size: 14px; }
+
+.tel-jours { display: none; }
+
+@media (max-width: 700px) {
+  input, select, textarea { font-size: 16px; } /* pas de zoom automatique quand on touche un champ */
+  button { min-height: 40px; }
+  header { padding-left: max(12px, env(safe-area-inset-left, 0px)) !important; padding-right: max(12px, env(safe-area-inset-right, 0px)) !important; }
+  main { padding: 12px max(12px, env(safe-area-inset-left, 0px)); gap: 12px; }
+  dialog { width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+  header .actions { flex-wrap: wrap; margin-left: 0; width: 100%; }
+  header .actions #btn-reglages { margin-left: auto; }
+  #alarmes { max-height: 38vh; overflow-y: auto; }
+
+  /* Un jour à la fois : barre des 7 jours + une seule colonne */
+  .tel-jours { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; position: sticky; top: var(--h-entete); z-index: 6;
+    background: var(--fond, var(--surface)); padding: 6px 0; }
+  .tel-jours button { display: grid; gap: 1px; justify-items: center; padding: 6px 2px; min-height: 56px; border-radius: 10px; font-size: 12px; }
+  .tel-jours button b { font-size: 16px; }
+  .tel-jours button small { font-size: 10px; color: var(--doux); min-height: 12px; }
+  .tel-jours button.aujourdhui { color: var(--accent); }
+  .tel-jours button.complet small { color: var(--vert); }
+  .tel-jours button.actif { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tel-jours button.actif small { color: #fff; }
+  .grille { min-width: 0; grid-template-columns: 44px minmax(0, 1fr); }
+  .grille .tete-jour, .grille [data-date] { display: none; }
+  .grille .tete-jour.tel-choisi { display: none; } /* la barre des jours remplace l'en-tête */
+  .grille [data-date].tel-choisi { display: flex; }
+  .grille .coin { display: none; }
+  .cellule { min-height: 34px; }
+  .cellule.journee { min-height: 56px; }
+  .panneau .boite:nth-child(2) { display: none; } /* mode d'emploi : inutile sur le téléphone */
+}
